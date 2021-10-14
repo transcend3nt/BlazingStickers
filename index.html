@@ -1,0 +1,422 @@
+<!doctype html>
+<html>
+<head>
+	<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.0/css/all.css" integrity="sha384-lZN37f5QGtY3VHgisS14W3ExzMWZxybE1SJSEsQp9S+oqd12jhcu+A56Ebc1zFSJ" crossorigin="anonymous">
+	
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/ekko-lightbox/5.3.0/ekko-lightbox.min.js" integrity="sha512-Y2IiVZeaBwXG1wSV7f13plqlmFOx8MdjuHyYFVoYzhyRr3nH/NMDjTBSswijzADdNzMyWNetbLMfOpIPl6Cv9g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ekko-lightbox/5.3.0/ekko-lightbox.css" integrity="sha512-Velp0ebMKjcd9RiCoaHhLXkR1sFoCCWXNp6w4zj1hfMifYB5441C+sKeBl/T/Ka6NjBiRfBBQRaQq65ekYz3UQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/ekko-lightbox/5.3.0/ekko-lightbox.js" integrity="sha512-YibiFIKqwi6sZFfPm5HNHQYemJwFbyyYHjrr3UT+VobMt/YBo1kBxgui5RWc4C3B4RJMYCdCAJkbXHt+irKfSA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+
+	<script>
+	var globalAspectRatio = 0; /*float*/
+	
+	var globalPreviousWidth = 0; /*cm*/
+	var globalDefaultWidthCM = 6; /*cm*/
+	
+	var globalPreviousHeight = 0; /*cm*/
+	var globalDefaultHeightCM = 3; /*cm*/
+	
+	var globalMaxWidthOrHeight = 29; /*cm*/
+	var globalMaxHeightImageDisplay = 450; /*pixels*/
+	
+	var globalAdjustingWidth; /*boolean*/
+	var globalPixelHeight;  /*pixels*/
+	var globalPixelWidth;  /*pixels*/
+
+	/*number spinner event*/
+	$(document).on('click', '.number-spinner button', function () {    
+		var btn = $(this),
+			oldValue = btn.closest('.number-spinner').find('input').val().trim(),
+			newVal = 0;
+		
+		if (btn.attr('data-dir') == 'up') {
+			newVal = parseInt(oldValue) + 1;
+		} else {
+			// direction is down
+			if (oldValue > 1) {
+				newVal = parseInt(oldValue) - 1;
+			} else {
+				newVal = 1;
+			}
+		}
+		btn.closest('.number-spinner').find('input').val(newVal);
+	});
+	
+	  var loadFile = function(event) {
+		var promise = fileReader(event.target.files[0]);
+		promise.then(
+			() => {
+				/* at this point, the image is already loaded into the img element*/
+				var userUploadedImage = document.getElementById('userUploadedImage');
+				
+				var _width = userUploadedImage.width;
+				var _height = userUploadedImage.height;
+				
+				globalPixelHeight = _height;
+				globalPixelWidth = _width;
+				
+				$("#txtWidth").val(_width);
+				$("#txtHeight").val(_height);
+				
+				globalAspectRatio = roundTo2DP(_height/_width);
+				
+				/*Aspect ratio is Width:Height or 1:(width/height)*/
+				$("#txtAspectRatio").val("1 : " + globalAspectRatio);
+				
+				/*Set default selection mode to width, force radio button for the first time when image loads*/
+				$("#radioWidthCM").prop('checked', true);
+				bootstrapWidthSelectionMode();
+				
+				/*check if image's height is more than 400px. if yes, then resize it to 400px height, and scale the width - just on screen*/
+				if (_height > globalMaxHeightImageDisplay){
+					tempWidth = roundTo2DP(globalMaxHeightImageDisplay / globalAspectRatio);
+					$('#userUploadedImage').height(globalMaxHeightImageDisplay);
+					$('#userUploadedImage').width(tempWidth);
+				}
+			}
+		);
+	  };
+	  
+	  function roundTo2DP(value){
+		return Math.round(value * 100) / 100;
+	  }
+	  
+	  function fileReader(file){
+		  return new Promise((resolve, reject) => {
+			var reader = new FileReader();  
+			reader.onload = function(){
+			
+				/* TODO before setting the source, we must refresh the image dimensions (width/height) to 100% to get ready for the first or a new image uploaded*/
+				$('#placeholderUserUploadedImage').children().remove();
+				var tempImg = $('<img id="userUploadedImage">');
+				tempImg.appendTo('#placeholderUserUploadedImage');
+				
+				/* reader.result is the data URL that represents the source of the image */
+				var userUploadedImage = document.getElementById('userUploadedImage');
+			  userUploadedImage.src = reader.result;
+			  
+			  /*after resolving this function, then we will go to the next promise*/
+			  resolve();
+			};
+			reader.onerror = reject;
+			reader.readAsDataURL(file);
+			/*do not resolve here because it is too early - the image hasn't loaded*/
+		  });
+		}
+		
+		function updateRangeCMInput(rangeVal){
+			// Check whether user is adjusting Width or Height
+			if (globalAdjustingWidth){
+				// Adjusting width
+				var _newHeight = rangeVal * globalAspectRatio;
+			
+				/*if height of sticker exceeds max height*/
+				if (_newHeight > globalMaxWidthOrHeight){
+					// show error message
+					console.log("You've exceeded the maximum height of 29 cm");
+					
+					// set value to previous saved width
+					$("#rangeChosenCM").val(globalPreviousWidth);
+					return;
+				}
+				
+				computeAndSetDPI(globalPixelHeight,_newHeight);
+				$("#rangeChosenCMOutput").val(rangeVal + " cm");
+				$("#txtWidthCM").val(rangeVal);
+				$("#txtHeightCM").val(roundTo2DP(_newHeight));
+				
+				// override previous saved width 
+				globalPreviousWidth = rangeVal;
+			}else{
+				// Adjusting height
+				var _newWidth = rangeVal / globalAspectRatio;
+			
+				/*if width of sticker exceeds max height*/
+				if (_newWidth > globalMaxWidthOrHeight){
+					// show error message
+					console.log("You've exceeded the maximum width of 29 cm");
+					
+					// set value to previous saved width
+					$("#rangeChosenCM").val(globalPreviousHeight);
+					return;
+				}
+			
+				computeAndSetDPI(globalPixelWidth, _newWidth);
+				$("#rangeChosenCMOutput").val(rangeVal + " cm");
+				$("#txtHeightCM").val(rangeVal);
+				$("#txtWidthCM").val(roundTo2DP(_newWidth));
+				
+				// override previous saved width 
+				globalPreviousHeight = rangeVal;
+			}
+			
+			// PPI = height(pixels)/ height of image (inches)
+			
+		}
+		
+		function radioSelectDimensionOnClick(val){
+			switch(val) {
+				case "radioWidthCM":
+					globalAdjustingWidth = true;
+					
+					bootstrapWidthSelectionMode();
+					
+					break;
+				case "radioHeightCM":
+					globalAdjustingWidth = false;
+					
+					bootstrapHeightSelectionMode();
+					
+					break;
+			}
+		}
+		
+		function bootstrapWidthSelectionMode(){
+			var defaultWidthCM = globalDefaultWidthCM;
+			globalPreviousWidth = defaultWidthCM;
+			
+			globalAdjustingWidth = true;
+			
+			var _newHeight = defaultWidthCM * globalAspectRatio;
+			
+			if (_newHeight > globalMaxWidthOrHeight){
+				// show error message
+				console.log("You've exceeded the maximum height of 29 cm");
+				return;
+			}
+			
+			computeAndSetDPI(globalPixelWidth, defaultWidthCM);
+			
+			$("#txtWidthCM").val(defaultWidthCM);
+			$("#txtHeightCM").val(roundTo2DP(_newHeight));
+			
+			$("#rangeChosenCM").val(defaultWidthCM);
+			$("#rangeChosenCMOutput").val(defaultWidthCM + " cm");
+		}
+		
+		function bootstrapHeightSelectionMode(){
+			var defaultHeightCM = globalDefaultHeightCM;
+			globalPreviousHeight = defaultHeightCM;
+			
+			globalAdjustingWidth = false;
+			
+			var _newWidth = defaultHeightCM / globalAspectRatio;
+			
+			if (_newWidth > globalMaxWidthOrHeight){
+				// show error message
+				console.log("You've exceeded the maximum width of 29 cm");
+				return;
+			}
+			
+			computeAndSetDPI(globalPixelHeight, defaultHeightCM);
+			
+			$("#txtHeightCM").val(defaultHeightCM);
+			$("#txtWidthCM").val(roundTo2DP(_newWidth));
+			
+			$("#rangeChosenCM").val(defaultHeightCM);
+			$("#rangeChosenCMOutput").val(defaultHeightCM + " cm");
+		}
+	
+		
+		function computeAndSetDPI(pixels, measurementInCM){
+			var stickerInch = measurementInCM / 2.54;
+			var dpi = roundTo2DP(pixels / stickerInch);
+			$("#txtDPI").val(dpi);
+			
+			if (dpi >= 300){
+				// show green
+				$("#txtDPI").css('color', '#00cc00');
+			}else if (dpi >= 200){
+				// show orange
+				$("#txtDPI").css('color', '#ffcc00');
+			}else{
+				// show red
+				$("#txtDPI").css('color', '#ff3300');
+			}
+		}
+		
+		function calculateCost(){
+			// Get requested sticker height and width
+			var _width = $("#txtWidthCM").val();
+			var _height = $("#txtHeightCM").val();
+			
+			// Get quantity requested
+			var _qty = $("#txtQty").val();
+		
+			// Get material selected
+			
+			// Get material colour selected
+		
+			// Get max quantity with landscape print
+			
+			// Get max quantity with portrait print
+			
+			
+			// Compute cost
+			
+		}
+		
+		
+
+	</script>
+</head>
+<body>
+	<h1>Upload File</h1>
+	
+	<div class="row">
+		<div class="col-sm-1">
+			Step 1
+		</div>
+		<div class="col-sm-2">
+			<input type="file" accept="image/*" onchange="loadFile(event)">
+		</div>
+	</div>
+	
+	<h1>Image information</h1>
+	
+	<div class="form-group row">
+		<label for="txtAspectRatio" class="col-sm-2 col-form-label">Aspect Ratio (Width : Height)</label>
+		<div >
+		  <input type="text" readonly class="form-control-plaintext" id="txtAspectRatio">
+		</div>
+		
+	</div>
+	
+	<div class="row">
+		<div class="col-sm-1">
+			<label for="txtWidth" class="col-form-label">Width (pixels)</label>
+		</div>
+		
+		<div class="col-sm-1">
+		  <input type="text" readonly class="form-control-plaintext" id="txtWidth">
+		</div>
+		
+		<div class="col-sm-1">
+			<label for="txtHeight" class="col-form-label">Height (pixels)</label>
+		</div>
+		
+		<div class="col-sm-1">
+		  <input type="text" readonly class="form-control-plaintext" id="txtHeight">
+		</div>
+		
+		<div class="col-sm-2">
+			<label for="txtDPI" class="col-form-label">Dots Per Inch (Recommended >= 300)</label>
+			<i class="fas fa-info-circle" data-toggle="tooltip" data-html="true" data-placement="bottom" title="Lower DPI will result in a blurry printout. You should either upload a higher resolution image or reduce the width/height of the sticker.">
+			</i>
+		</div>
+		
+		<div class="col-sm-1">
+		  <input type="text" readonly class="form-control-plaintext" style="font-weight: bold;" id="txtDPI">
+		</div>
+	</div>
+
+	
+	<h1>Sticker printout options</h1>
+	
+	<div>
+		Note: A4 paper size is 21 x 29.7 cm. The maximum height or width of a sticker is 29 cm. The default sticker width is set to 6 cm, and the default sticker height is set to 3 cm. Please adjust accordingly using the slider below.
+	</div>
+	
+	<div class="form-group row">
+		<label for="rangeChosenCM" class="col-sm-3 col-form-label">Adjust the width/height (in cm) of the sticker</label>
+		<input type="range" class="form-range col-sm-8" min="2" max="29" step="0.1" id="rangeChosenCM" onchange="updateRangeCMInput(this.value);" oninput="updateRangeCMInput(this.value);">
+		<input type="text" readonly class="form-control-plaintext col-sm-1" id="rangeChosenCMOutput">
+	</div>
+	
+	<div class="row">
+		<div class="col-sm-2">
+			<label class="col-form-label">Adjust your sticker size by:</label>
+			<i class="fas fa-info-circle" data-toggle="tooltip" data-html="true" data-placement="bottom" title="Adjust your sticker size by width or height. If you adjust by the width, the height will be adjusted automatically using the image's aspect ratio. This is vice versa if you adjust by the height. The maximum width or height is 29 cm.">
+			</i>
+		</div>
+		
+	  <div class="col-sm-1">
+		<input class="col-check-input" type="radio" name="radioPrimaryDimensionAdjustment" id="radioWidthCM" onclick="radioSelectDimensionOnClick(this.id)">
+		<label class="col-form-label" for="radioWidthCM">Width (cm)</label>
+	  </div>
+	  <div class="col-sm-1">
+		  <input type="text" readonly class="form-control-plaintext" id="txtWidthCM">
+		</div>
+	  <div class="col-sm-1">
+		<input class="col-check-input" type="radio" name="radioPrimaryDimensionAdjustment" id="radioHeightCM" onclick="radioSelectDimensionOnClick(this.id)">
+		<label class="col-form-label" for="radioHeightCM">Height (cm)</label>
+	  </div>
+	  <div class="col-sm-1"><input type="text" readonly class="form-control-plaintext" id="txtHeightCM"></div>
+	</div>
+
+	<div class="row">
+		<div class="col-sm-2">
+			Choose material: 
+			<i class="fas fa-info-circle" data-toggle="tooltip" data-html="true" data-placement="bottom" title="Choose your sticker material">
+			</i>
+		</div>
+		<div class="col-sm-1">
+			<input class="col-check-input" type="radio" name="radioMaterial" id="radioMaterialSticker" checked="true">
+			<label class="col-form-label" for="radioMaterialSticker">Sticker</label>
+		</div>
+		<div class="col-sm-1">
+			<input class="col-check-input" type="radio" name="radioMaterial" id="radioMaterialVinyl">
+			<label class="col-form-label" for="radioMaterialVinyl">Vinyl</label>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-sm-2">
+			Choose material colour: 
+			<i class="fas fa-info-circle" data-toggle="tooltip" data-html="true" data-placement="bottom" title="Choose the colour of your sticker material">
+			</i>
+		</div>
+		<div class="col-sm-1">
+			<input class="col-check-input" type="radio" name="radioColour" id="radioColourWhite" checked="true">
+			<label class="col-form-label" for="radioColourWhite">White</label>
+		</div>
+		<div class="col-sm-1">
+			<input class="col-check-input" type="radio" name="radioColour" id="radioColourTransparent">
+			<label class="col-form-label" for="radioColourTransparent">Transparent</label>
+		</div>
+	</div>
+	
+	<div class="row">
+		<div class="col-sm-2">
+			Choose quantity: 
+			<i class="fas fa-info-circle" data-toggle="tooltip" data-html="true" data-placement="bottom" title="Choose the quantity of stickers. Minimum is 1.">
+			</i>
+		</div>
+		<div class="col-sm-1">
+			<div class="input-group number-spinner">
+				<span class="input-group-btn">
+					<button class="btn btn-default" data-dir="dwn"><i class="fas fa-minus"></i></button>
+				</span>
+				<input type="text" class="form-control text-center" value="1" id="txtQty">
+				<span class="input-group-btn">
+					<button class="btn btn-default" data-dir="up"><i class="fas fa-plus"></i></button>
+				</span>
+			</div>
+		</div>
+		<div class="col-sm-6"></div>
+		<div class="col-sm-2">
+			<button type="button" class="btn btn-primary">Get Purchase Code</button>
+		</div>
+	</div>
+	
+
+	<div class="row">
+	  <div class="col-sm-1"></div>
+	  <div class="col-sm-11">Width -></div>
+	</div>
+
+	<div class="row">
+	  <div class="col-sm-1">Height ^</div>
+	  <div class="col-sm-11" id="placeholderUserUploadedImage">
+	  
+		<!-- <img id="userUploadedImage"/> -->
+	  
+	  </div>
+	</div>
+	
+</body>
+</html>
